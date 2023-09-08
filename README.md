@@ -34,7 +34,7 @@ fn main() {
     let mut client = Client::connect("postgresql://postgres:postgres@localhost/library", NoTls).unwrap();
 
     PostgresMigrator::new("./migrations")
-        .migrate(conn)
+        .migrate(&mut conn)
         .unwrap();
 }
 ```
