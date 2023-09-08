@@ -11,7 +11,7 @@ use crate::error::BoxError;
 use crate::fs::MigrationFile;
 
 const CREATE_MIGRATIONS_TABLE: &str = r#"
-CREATE TABLE IF NOT EXISTS $1 (
+CREATE TABLE IF NOT EXISTS {{migrations_table}} (
     version VARCHAR(255) PRIMARY KEY,
     description VARCHAR(255) NOT NULL,
     sql TEXT NOT NULL,
@@ -25,7 +25,9 @@ pub(crate) fn ensure_migrations_table_exists(
     pg: &mut Client,
     migrations_table: &str,
 ) -> Result<(), BoxError> {
-    let _ = pg.execute(CREATE_MIGRATIONS_TABLE, &[&migrations_table])?;
+    let query = CREATE_MIGRATIONS_TABLE.replace("{{migrations_table}}", migrations_table);
+
+    let _ = pg.execute(&query, &[])?;
 
     Ok(())
 }
@@ -35,13 +37,15 @@ pub(crate) async fn ensure_migrations_table_exists(
     pg: &mut Client,
     migrations_table: &str,
 ) -> Result<(), BoxError> {
+    let query = CREATE_MIGRATIONS_TABLE.replace("{{migrations_table}}", migrations_table);
+
     let _ = pg
-        .execute(CREATE_MIGRATIONS_TABLE, &[&migrations_table])
+        .execute(&query, &[&migrations_table])
         .await?;
     Ok(())
 }
 
-const SELECT_MIGRATIONS: &str = "SELECT * FROM $1";
+const SELECT_MIGRATIONS: &str = "SELECT * FROM {{migrations_table}}";
 
 #[cfg(feature = "postgres")]
 pub(crate) fn validate_applied(
@@ -49,7 +53,9 @@ pub(crate) fn validate_applied(
     migrations_table: &str,
     fs_migrations: &[MigrationFile],
 ) -> Result<Vec<String>, BoxError> {
-    let applied_migrations = pg.query(SELECT_MIGRATIONS, &[&migrations_table])?;
+    let query = SELECT_MIGRATIONS.replace("{{migrations_table}}", migrations_table);
+
+    let applied_migrations = pg.query(&query, &[])?;
 
     let mut applied_versions = Vec::with_capacity(applied_migrations.len());
 
@@ -78,7 +84,9 @@ pub(crate) async fn validate_applied(
     migrations_table: &str,
     fs_migrations: &[MigrationFile],
 ) -> Result<Vec<String>, BoxError> {
-    let applied_migrations = pg.query(SELECT_MIGRATIONS, &[&migrations_table]).await?;
+    let query = SELECT_MIGRATIONS.replace("{{migrations_table}}", migrations_table);
+
+    let applied_migrations = pg.query(&query, &[]).await?;
 
     let mut applied_versions = Vec::with_capacity(applied_migrations.len());
 
@@ -102,8 +110,8 @@ pub(crate) async fn validate_applied(
 }
 
 const INSERT_MIGRATION: &str = r#"
-    INSERT INTO $1 (version, description, sql, applied_at, checksum)
-    VALUES ($2, $3, $4, $5, $6)
+    INSERT INTO {{migrations_table}} (version, description, sql, applied_at, checksum)
+    VALUES ($1, $2, $3, $4, $5)
 "#;
 
 #[cfg(feature = "postgres")]
@@ -123,10 +131,11 @@ pub(crate) fn apply(
 
     tx.batch_execute(&migration.sql)?;
 
+    let query = INSERT_MIGRATION.replace("{{migrations_table}}", migrations_table);
+
     tx.execute(
-        INSERT_MIGRATION,
+        &query,
         &[
-            &migrations_table,
             &migration.version,
             &migration.description,
             &migration.sql,
@@ -157,10 +166,11 @@ pub(crate) async fn apply(
 
     tx.batch_execute(&migration.sql).await?;
 
+    let query = INSERT_MIGRATION.replace("{{migrations_table}}", migrations_table);
+
     tx.execute(
-        INSERT_MIGRATION,
+        &query,
         &[
-            &migrations_table,
             &migration.version,
             &migration.description,
             &migration.sql,
