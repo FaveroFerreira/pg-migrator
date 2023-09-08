@@ -2,6 +2,15 @@
 name = "pg-migrator"
 version = "0.1.0"
 edition = "2021"
+description = "Macro free Postgres migration tool for Rust Postgres and Tokio Postgres"
+documentation = "https://docs.rs/pg-migrator/"
+homepage = "https://github.com/faveroferreira/pg-migrator"
+repository = "https://github.com/faveroferreira/pg-migrator"
+readme = "README.md"
+authors = ["Guilherme Favero Ferreira <guifaveroferreira@gmail.com>"]
+keywords = ["database", "sql", "migrations"]
+categories = ["database"]
+license = "MIT"
 
 [dependencies]
 tokio-postgres = { version = "0.7", default-features = false, features = ["with-chrono-0_4"], optional = true }
