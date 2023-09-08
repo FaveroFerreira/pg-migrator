@@ -40,7 +40,7 @@ pub(crate) async fn ensure_migrations_table_exists(
     let query = CREATE_MIGRATIONS_TABLE.replace("{{migrations_table}}", migrations_table);
 
     let _ = pg
-        .execute(&query, &[&migrations_table])
+        .execute(&query, &[])
         .await?;
     Ok(())
 }
