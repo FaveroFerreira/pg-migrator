@@ -33,10 +33,7 @@ pub(crate) struct MigrationFile {
 pub(crate) fn load_migrations<P: AsRef<Path>>(
     migrations_path: P,
 ) -> Result<Vec<MigrationFile>, MigrationError> {
-    let re = Regex::new(r"^V(\d+)__(.+)\.sql$").map_err(|err| MigrationError {
-        message: "Invalid migration filename".to_string(),
-        cause: Some(Box::new(err)),
-    })?;
+    let re = Regex::new(r"^V(\d+)__(.+)\.sql$")?;
 
     let dir = fs::read_dir(migrations_path)?;
     let mut migration_files = Vec::new();

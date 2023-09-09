@@ -67,23 +67,20 @@ pub(crate) fn validate_applied(
         match fs_migration {
             Some(fs_migration) => {
                 if fs_migration.checksum != checksum {
-                    return Err(MigrationError {
-                        message: format!(
-                            "checksum mismatch for migration {}",
-                            fs_migration.version
-                        ),
-                        cause: None,
-                    });
+                    return Err(MigrationError::Migration(format!(
+                        "checksum mismatch for migration {}",
+                        fs_migration.version
+                    )));
                 }
 
                 applied_versions.push(version);
             }
             None => {
                 if !ignore_missing_migrations {
-                    return Err(MigrationError {
-                        message: format!("migration {} not found", version),
-                        cause: None,
-                    });
+                    return Err(MigrationError::Migration(format!(
+                        "migration {} not found",
+                        version
+                    )));
                 }
             }
         }
@@ -114,23 +111,20 @@ pub(crate) async fn validate_applied(
         match fs_migration {
             Some(fs_migration) => {
                 if fs_migration.checksum != checksum {
-                    return Err(MigrationError {
-                        message: format!(
-                            "checksum mismatch for migration {}",
-                            fs_migration.version
-                        ),
-                        cause: None,
-                    });
+                    return Err(MigrationError::Migration(format!(
+                        "checksum mismatch for migration {}",
+                        fs_migration.version
+                    )));
                 }
 
                 applied_versions.push(version);
             }
             None => {
                 if !ignore_missing_migrations {
-                    return Err(MigrationError {
-                        message: format!("migration {} not found", version),
-                        cause: None,
-                    });
+                    return Err(MigrationError::Migration(format!(
+                        "migration {} not found",
+                        version
+                    )));
                 }
             }
         }

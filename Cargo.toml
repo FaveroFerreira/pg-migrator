@@ -15,6 +15,7 @@ license = "MIT"
 [dependencies]
 tokio-postgres = { version = "0.7", default-features = false, features = ["with-chrono-0_4"], optional = true }
 postgres = { version = "0.19", default-features = false, features = ["with-chrono-0_4"], optional = true }
+thiserror = "1.0"
 regex = "1.9"
 chrono = "0.4"
 
