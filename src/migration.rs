@@ -7,7 +7,7 @@ use postgres::Client;
 #[cfg(feature = "tokio-postgres")]
 use tokio_postgres::Client;
 
-use crate::error::BoxError;
+use crate::error::MigrationError;
 use crate::fs::MigrationFile;
 
 const CREATE_MIGRATIONS_TABLE: &str = r#"
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS {{migrations_table}} (
 pub(crate) fn ensure_migrations_table_exists(
     pg: &mut Client,
     migrations_table: &str,
-) -> Result<(), BoxError> {
+) -> Result<(), MigrationError> {
     let query = CREATE_MIGRATIONS_TABLE.replace("{{migrations_table}}", migrations_table);
 
     let _ = pg.execute(&query, &[])?;
@@ -36,12 +36,10 @@ pub(crate) fn ensure_migrations_table_exists(
 pub(crate) async fn ensure_migrations_table_exists(
     pg: &mut Client,
     migrations_table: &str,
-) -> Result<(), BoxError> {
+) -> Result<(), MigrationError> {
     let query = CREATE_MIGRATIONS_TABLE.replace("{{migrations_table}}", migrations_table);
 
-    let _ = pg
-        .execute(&query, &[])
-        .await?;
+    let _ = pg.execute(&query, &[]).await?;
     Ok(())
 }
 
@@ -51,8 +49,9 @@ const SELECT_MIGRATIONS: &str = "SELECT * FROM {{migrations_table}}";
 pub(crate) fn validate_applied(
     pg: &mut Client,
     migrations_table: &str,
+    ignore_missing_migrations: bool,
     fs_migrations: &[MigrationFile],
-) -> Result<Vec<String>, BoxError> {
+) -> Result<Vec<String>, MigrationError> {
     let query = SELECT_MIGRATIONS.replace("{{migrations_table}}", migrations_table);
 
     let applied_migrations = pg.query(&query, &[])?;
@@ -63,16 +62,31 @@ pub(crate) fn validate_applied(
         let version = applied_migration.try_get::<_, String>("version")?;
         let checksum = applied_migration.try_get::<_, String>("checksum")?;
 
-        let fs_migration = fs_migrations
-            .iter()
-            .find(|m| m.version == version)
-            .ok_or_else(|| format!("migration {} not found", version))?;
+        let fs_migration = fs_migrations.iter().find(|m| m.version == version);
 
-        if fs_migration.checksum != checksum {
-            return Err(format!("checksum mismatch for migration {}", fs_migration.version).into());
+        match fs_migration {
+            Some(fs_migration) => {
+                if fs_migration.checksum != checksum {
+                    return Err(MigrationError {
+                        message: format!(
+                            "checksum mismatch for migration {}",
+                            fs_migration.version
+                        ),
+                        cause: None,
+                    });
+                }
+
+                applied_versions.push(version);
+            }
+            None => {
+                if !ignore_missing_migrations {
+                    return Err(MigrationError {
+                        message: format!("migration {} not found", version),
+                        cause: None,
+                    });
+                }
+            }
         }
-
-        applied_versions.push(version);
     }
 
     Ok(applied_versions)
@@ -82,8 +96,9 @@ pub(crate) fn validate_applied(
 pub(crate) async fn validate_applied(
     pg: &mut Client,
     migrations_table: &str,
+    ignore_missing_migrations: bool,
     fs_migrations: &[MigrationFile],
-) -> Result<Vec<String>, BoxError> {
+) -> Result<Vec<String>, MigrationError> {
     let query = SELECT_MIGRATIONS.replace("{{migrations_table}}", migrations_table);
 
     let applied_migrations = pg.query(&query, &[]).await?;
@@ -94,16 +109,31 @@ pub(crate) async fn validate_applied(
         let version = applied_migration.try_get::<_, String>("version")?;
         let checksum = applied_migration.try_get::<_, String>("checksum")?;
 
-        let fs_migration = fs_migrations
-            .iter()
-            .find(|m| m.version == version)
-            .ok_or_else(|| format!("migration {} not found", version))?;
+        let fs_migration = fs_migrations.iter().find(|m| m.version == version);
 
-        if fs_migration.checksum != checksum {
-            return Err(format!("checksum mismatch for migration {}", fs_migration.version).into());
+        match fs_migration {
+            Some(fs_migration) => {
+                if fs_migration.checksum != checksum {
+                    return Err(MigrationError {
+                        message: format!(
+                            "checksum mismatch for migration {}",
+                            fs_migration.version
+                        ),
+                        cause: None,
+                    });
+                }
+
+                applied_versions.push(version);
+            }
+            None => {
+                if !ignore_missing_migrations {
+                    return Err(MigrationError {
+                        message: format!("migration {} not found", version),
+                        cause: None,
+                    });
+                }
+            }
         }
-
-        applied_versions.push(version);
     }
 
     Ok(applied_versions)
@@ -119,7 +149,7 @@ pub(crate) fn apply(
     pg: &mut Client,
     migrations_table: &str,
     migration: &MigrationFile,
-) -> Result<(), BoxError> {
+) -> Result<(), MigrationError> {
     let mut hasher = DefaultHasher::new();
     hasher.write(migration.sql.as_bytes());
 
@@ -154,7 +184,7 @@ pub(crate) async fn apply(
     pg: &mut Client,
     migrations_table: &str,
     migration: &MigrationFile,
-) -> Result<(), BoxError> {
+) -> Result<(), MigrationError> {
     let mut hasher = DefaultHasher::new();
     hasher.write(migration.sql.as_bytes());
 
@@ -184,5 +214,3 @@ pub(crate) async fn apply(
 
     Ok(())
 }
-
-

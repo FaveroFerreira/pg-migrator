@@ -11,8 +11,11 @@ use std::path::Path;
 
 use regex::Regex;
 
-use crate::error::BoxError;
+use crate::error::MigrationError;
 
+/// A SQL migration file.
+///
+/// This struct contains all the information about a SQL migration file.
 pub(crate) struct MigrationFile {
     pub version: String,
     pub description: String,
@@ -20,12 +23,20 @@ pub(crate) struct MigrationFile {
     pub checksum: String,
 }
 
+/// Load all the SQL migrations from the given path.
+///
+/// Migrations should be named in the following format:
+/// V{version}__{description}.sql
+///
+/// Example:
+/// V001__CREATE_USERS_TABLE.sql
 pub(crate) fn load_migrations<P: AsRef<Path>>(
     migrations_path: P,
-) -> Result<Vec<MigrationFile>, BoxError> {
-    // Regex for extracting the version and description from the filename
-    // Example: V001__CREATE_USERS_TABLE.sql
-    let re = Regex::new(r"^V(\d+)__(.+)\.sql$")?;
+) -> Result<Vec<MigrationFile>, MigrationError> {
+    let re = Regex::new(r"^V(\d+)__(.+)\.sql$").map_err(|err| MigrationError {
+        message: "Invalid migration filename".to_string(),
+        cause: Some(Box::new(err)),
+    })?;
 
     let dir = fs::read_dir(migrations_path)?;
     let mut migration_files = Vec::new();

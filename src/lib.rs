@@ -45,7 +45,12 @@ impl<P: AsRef<Path>> PostgresMigrator<P> {
 
         migration::ensure_migrations_table_exists(pg, &self.migrations_table)?;
 
-        let applied = migration::validate_applied(pg, &self.migrations_table, &migrations)?;
+        let applied = migration::validate_applied(
+            pg,
+            &self.migrations_table,
+            self.ignore_missing_migrations,
+            &migrations,
+        )?;
 
         for migration in migrations {
             if applied.contains(&migration.version) {
@@ -64,7 +69,13 @@ impl<P: AsRef<Path>> PostgresMigrator<P> {
 
         migration::ensure_migrations_table_exists(pg, &self.migrations_table).await?;
 
-        let applied = migration::validate_applied(pg, &self.migrations_table, &migrations).await?;
+        let applied = migration::validate_applied(
+            pg,
+            &self.migrations_table,
+            self.ignore_missing_migrations,
+            &migrations,
+        )
+        .await?;
 
         for migration in migrations {
             if applied.contains(&migration.version) {
