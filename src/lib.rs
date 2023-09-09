@@ -5,8 +5,7 @@ use postgres::Client;
 #[cfg(feature = "tokio-postgres")]
 use tokio_postgres::Client;
 
-#[cfg(any(feature = "postgres", feature = "tokio-postgres"))]
-use crate::error::BoxError;
+use crate::error::MigrationError;
 
 mod error;
 mod fs;
@@ -40,7 +39,7 @@ impl<P: AsRef<Path>> PostgresMigrator<P> {
     }
 
     #[cfg(feature = "postgres")]
-    pub fn migrate(&self, pg: &mut Client) -> Result<(), BoxError> {
+    pub fn migrate(&self, pg: &mut Client) -> Result<(), MigrationError> {
         let migrations = fs::load_migrations(self.migrations_path.as_ref())?;
 
         migration::ensure_migrations_table_exists(pg, &self.migrations_table)?;
@@ -64,7 +63,7 @@ impl<P: AsRef<Path>> PostgresMigrator<P> {
     }
 
     #[cfg(feature = "tokio-postgres")]
-    pub async fn migrate(&self, pg: &mut Client) -> Result<(), BoxError> {
+    pub async fn migrate(&self, pg: &mut Client) -> Result<(), MigrationError> {
         let migrations = fs::load_migrations(self.migrations_path.as_ref())?;
 
         migration::ensure_migrations_table_exists(pg, &self.migrations_table).await?;
