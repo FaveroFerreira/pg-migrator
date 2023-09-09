@@ -1,6 +1,6 @@
 [package]
 name = "pg-migrator"
-version = "0.1.1"
+version = "0.2.1"
 edition = "2021"
 description = "Macro free Postgres migration tool for Rust Postgres and Tokio Postgres"
 documentation = "https://docs.rs/pg-migrator"
